@@ -1,3 +1,3 @@
-module github.com/yakawa1128/anywhereQL
+module github.com/anywhereQL/anywhereQL
 
 go 1.13

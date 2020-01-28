@@ -18,8 +18,8 @@ func (t *Token) Debug() string {
 
 const (
 	// Special Token
-	ILLEGAL       = "ILLEGAL"
-	EOF           = "EOF"
+	ILLEGAL_TOKEN = "ILLEGAL"
+	EOF_TOKEN     = "EOF"
 	COMMENT_TOKEN = "COMMENT"
 
 	// Token
@@ -44,7 +44,7 @@ const (
 	PERIOD_TOKEN                = "PERIOD (.)"
 	SOLIDAS_TOKEN               = "SOLIDAS (/)"
 	COLON_TOKEN                 = "COLON (:)"
-	SEMICOLON                   = "SEMICOLON (;)"
+	SEMICOLON_TOKEN             = "SEMICOLON (;)"
 	LESS_THAN_OPERATOR_TOKEN    = "LESS THAN (<)"
 	EQUALS_OPERATOR_TOKEN       = "EQUALS (=)"
 	GREATER_THAN_OPERATOR_TOKEN = "GREATER THAN (>)"
