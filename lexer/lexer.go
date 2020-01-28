@@ -25,6 +25,7 @@ func (l *Lexer) Tokenize() ([]token.Token, error) {
 	t := make([]token.Token, 0, 100)
 
 	for {
+		l.skipSpace()
 		tok, err := l.nextToken()
 		if err != nil {
 			e := make([]token.Token, 0, 100)
@@ -64,7 +65,6 @@ func (l *Lexer) nextToken() (token.Token, error) {
 		t.Type = tok
 		t.Literal = s
 	}
-	l.readChar()
 	return t, nil
 }
 
@@ -93,7 +93,13 @@ func (l *Lexer) peek2Char() byte {
 }
 
 func (l *Lexer) skipSpace() {
-	for l.ch == ' ' {
+	for l.isSeparator() {
+		if l.ch == 0 {
+			return
+		}
+		if l.ch == '-' {
+			return
+		}
 		l.readChar()
 	}
 }
@@ -110,4 +116,10 @@ func (l *Lexer) skipSeparator() {
 		}
 	}
 	return
+}
+
+func (l *Lexer) setPosition(p, r int, c byte) {
+	l.position = p
+	l.readPosition = r
+	l.ch = c
 }

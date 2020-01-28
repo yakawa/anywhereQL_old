@@ -19,32 +19,42 @@ func (err *LexerReadError) Error() string {
 func (l *Lexer) readSpecialCharacterToken() (token.TokenType, string, error) {
 	switch l.ch {
 	case ' ':
+		l.readChar()
 		return token.SPACE_TOKEN, " ", nil
 	case '\'':
 		if l.peekChar() == 0 {
+			l.readChar()
 			return token.QUOTE_TOKEN, "'", nil
 		}
 		tok, s, err := l.readQuotedToken()
 		return tok, s, err
 	case '"':
 		if l.peekChar() == 0 {
+			l.readChar()
 			return token.DOUBLE_QUOTE_TOKEN, "\"", nil
 		}
 		tok, s, err := l.readDoubleQuotedToken()
 		return tok, s, err
 	case '%':
+		l.readChar()
 		return token.PERCENT_TOKEN, "%", nil
 	case '&':
+		l.readChar()
 		return token.AMPERSAND_TOKEN, "&", nil
 	case '(':
+		l.readChar()
 		return token.LEFT_PAREN_TOKEN, "(", nil
 	case ')':
+		l.readChar()
 		return token.RIGHT_PAREN_TOKEN, ")", nil
 	case '*':
+		l.readChar()
 		return token.ASTERISK_TOKEN, "*", nil
 	case '+':
+		l.readChar()
 		return token.PLUS_SIGN_TOKEN, "+", nil
 	case ',':
+		l.readChar()
 		return token.COMMA_TOKEN, ",", nil
 	case '-':
 		n := l.peekChar()
@@ -52,6 +62,7 @@ func (l *Lexer) readSpecialCharacterToken() (token.TokenType, string, error) {
 			c, err := l.readComment()
 			return token.COMMENT_TOKEN, c, err
 		}
+		l.readChar()
 		return token.MINUS_SIGN_TOKEN, "-", nil
 	case '.':
 		if l.isPeekDigit() {
@@ -59,37 +70,50 @@ func (l *Lexer) readSpecialCharacterToken() (token.TokenType, string, error) {
 			return token.NUMBER_TOKEN, s, err
 		} else if l.peekChar() == '.' {
 			l.readChar()
+			l.readChar()
 			return token.DOUBLE_PERIOD_TOKEN, "..", nil
 		}
+		l.readChar()
 		return token.PERIOD_TOKEN, ".", nil
 	case '/':
+		l.readChar()
 		return token.SOLIDAS_TOKEN, "/", nil
 	case ':':
+		l.readChar()
 		return token.COLON_TOKEN, ":", nil
 	case ';':
+		l.readChar()
 		return token.SEMICOLON_TOKEN, ";", nil
 	case '<':
 		n := l.peekChar()
 		if n == '>' {
 			l.readChar()
+			l.readChar()
 			return token.NOT_EQUALS_OPERATOR_TOKEN, "<>", nil
 		} else if n == '=' {
 			l.readChar()
+			l.readChar()
 			return token.LESS_THAN_OR_EQUALS_OPERATOR_TOKEN, "<=", nil
 		}
+		l.readChar()
 		return token.LESS_THAN_OPERATOR_TOKEN, "<", nil
 	case '=':
+		l.readChar()
 		return token.EQUALS_OPERATOR_TOKEN, "=", nil
 	case '>':
 		if l.peekChar() == '=' {
 			l.readChar()
+			l.readChar()
 			return token.GREATER_THAN_OR_EQUALS_OPERATOR_TOKEN, ">=", nil
 		}
+		l.readChar()
 		return token.GREATER_THAN_OPERATOR_TOKEN, ">", nil
 	case '?':
+		l.readChar()
 		return token.QUESTION_MARK_TOKEN, "?", nil
 	case '_':
 		if l.isPeekSeparator() {
+			l.readChar()
 			return token.UNDERSCORE_TOKEN, "_", nil
 		}
 		tok, s, err := l.readIdentifier()
@@ -97,15 +121,24 @@ func (l *Lexer) readSpecialCharacterToken() (token.TokenType, string, error) {
 	case '|':
 		if l.peekChar() == '|' {
 			l.readChar()
+			l.readChar()
 			return token.CONCATENATION_OPERATOR_TOKEN, "||", nil
 		}
+		l.readChar()
 		return token.VERTICAL_BAR_TOKEN, "|", nil
 	case '[':
+		l.readChar()
 		return token.LEFT_BRACKET_TOKEN, "[", nil
 	case ']':
+		l.readChar()
 		return token.RIGHT_BRACKET_TOKEN, "]", nil
 	}
 	return token.ILLEGAL_TOKEN, "", &LexerReadError{Msg: "Character is not Special Character", Ch: l.ch}
+}
+
+func (l *Lexer) makeToken(t token.TokenType, s string, err error) (token.TokenType, string, error) {
+	l.readChar()
+	return t, s, err
 }
 
 func (l *Lexer) readComment() (string, error) {
@@ -226,12 +259,11 @@ func (l *Lexer) readNumber() (string, error) {
 }
 
 func (l *Lexer) readQuotedToken() (token.TokenType, string, error) {
-	literal := ""
+	pos := l.position
 	for true {
 		if l.ch != '\'' {
 			break
 		}
-		pos := l.position
 		for true {
 			l.readChar()
 			if !l.isNonquotedCharacter() {
@@ -239,22 +271,21 @@ func (l *Lexer) readQuotedToken() (token.TokenType, string, error) {
 			}
 		}
 		if l.ch == '\'' {
-			literal += strings.TrimSpace(l.input[pos:l.position])
+			l.readChar()
+			break
 		} else {
-			return token.ILLEGAL_TOKEN, "", &LexerReadError{Msg: "Illegal Quoted string", Ch: 0}
+			return token.ILLEGAL_TOKEN, "", &LexerReadError{Msg: "Illegal Quoted string", Ch: l.ch}
 		}
-		l.skipSpace()
 	}
-	return token.IDENTIFIER_TOKEN, literal, nil
+	return token.IDENTIFIER_TOKEN, l.input[pos:l.position], nil
 }
 
 func (l *Lexer) readDoubleQuotedToken() (token.TokenType, string, error) {
-	literal := ""
+	pos := l.position
 	for true {
 		if l.ch != '"' {
 			break
 		}
-		pos := l.position
 		for true {
 			l.readChar()
 			if !l.isNondoublequotedCharacter() {
@@ -262,13 +293,13 @@ func (l *Lexer) readDoubleQuotedToken() (token.TokenType, string, error) {
 			}
 		}
 		if l.ch == '"' {
-			literal += strings.TrimSpace(l.input[pos:l.position])
+			l.readChar()
+			break
 		} else {
 			return token.ILLEGAL_TOKEN, "", &LexerReadError{Msg: "Illegal Double Quoted string", Ch: 0}
 		}
-		l.skipSpace()
 	}
-	return token.IDENTIFIER_TOKEN, literal, nil
+	return token.IDENTIFIER_TOKEN, l.input[pos:l.position], nil
 }
 
 func (l *Lexer) readIdentifier() (token.TokenType, string, error) {
@@ -282,7 +313,13 @@ func (l *Lexer) readIdentifier() (token.TokenType, string, error) {
 	} else if l.ch == '"' {
 		tok, s, err = l.readDoubleQuotedToken()
 		tok = token.LookupKeyword(s)
+	} else if (l.ch == 'B' || l.ch == 'b' || l.ch == 'X' || l.ch == 'x') && l.peekChar() == '\'' {
+		s, err = l.readNumber()
+		tok = token.NUMBER_TOKEN
 	} else {
+		t_pos := l.position
+		t_read := l.readPosition
+		t_ch := l.ch
 		for true {
 			if l.isSeparator() {
 				break
@@ -295,11 +332,32 @@ func (l *Lexer) readIdentifier() (token.TokenType, string, error) {
 				l.readQuotedToken()
 				break
 			}
+			if !(l.isSimpleLatin() || l.isDigit() || l.ch == '_') {
+				if strings.ToUpper(l.input[pos:l.position]) == "END" {
+					if l.ch != '-' {
+						break
+					} else {
+						t_pos = l.position
+						t_read = l.readPosition
+						t_ch = l.ch
+					}
+				} else {
+					break
+				}
+			}
 			l.readChar()
 		}
-		c := strings.TrimSpace(l.input[pos:l.position])
-		t := token.LookupKeyword(c)
-		return t, c, nil
+		if pos != t_pos {
+			if strings.ToUpper(l.input[pos:l.position]) != "END-EXEC" {
+				l.setPosition(t_pos, t_read, t_ch)
+				s = l.input[pos:l.position]
+			} else {
+				s = l.input[pos:l.position]
+			}
+		} else {
+			s = strings.TrimSpace(l.input[pos:l.position])
+		}
+		tok = token.LookupKeyword(s)
 	}
 	return tok, s, err
 }

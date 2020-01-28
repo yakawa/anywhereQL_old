@@ -1,6 +1,8 @@
 package lexer
 
 import (
+	"errors"
+	"fmt"
 	"testing"
 
 	"github.com/anywhereQL/anywhereQL/token"
@@ -434,5 +436,184 @@ func TestReadIdentifier(t *testing.T) {
 				t.Errorf("[%d] Err: Token Literal mistmatch (expected: %s, but got: %s)\n", i, tt.expectedLiteral, li)
 			}
 		}
+	}
+}
+
+func TestNextToken(t *testing.T) {
+	tests := []struct {
+		input         string
+		expectedToken token.TokenType
+		isError       bool
+	}{
+		{"\"", token.DOUBLE_QUOTE_TOKEN, false},
+		{"%", token.PERCENT_TOKEN, false},
+		{"&", token.AMPERSAND_TOKEN, false},
+		{"'", token.QUOTE_TOKEN, false},
+		{"(", token.LEFT_PAREN_TOKEN, false},
+		{")", token.RIGHT_PAREN_TOKEN, false},
+		{"*", token.ASTERISK_TOKEN, false},
+		{"+", token.PLUS_SIGN_TOKEN, false},
+		{",", token.COMMA_TOKEN, false},
+		{"-", token.MINUS_SIGN_TOKEN, false},
+		{".", token.PERIOD_TOKEN, false},
+		{"/", token.SOLIDAS_TOKEN, false},
+		{"<>", token.NOT_EQUALS_OPERATOR_TOKEN, false},
+		{">=", token.GREATER_THAN_OR_EQUALS_OPERATOR_TOKEN, false},
+		{"<=", token.LESS_THAN_OR_EQUALS_OPERATOR_TOKEN, false},
+		{"||", token.CONCATENATION_OPERATOR_TOKEN, false},
+		{"..", token.DOUBLE_PERIOD_TOKEN, false},
+		{"ABSOLUTE", token.KEYWORD_ABSOLUTE_TOKEN, false},
+		{"ACTION", token.KEYWORD_ACTION_TOKEN, false},
+		{"ADD", token.KEYWORD_ADD_TOKEN, false},
+		{"ALL", token.KEYWORD_ALL_TOKEN, false},
+		{"ALLOCATE", token.KEYWORD_ALLOCATE_TOKEN, false},
+		{"ALTER", token.KEYWORD_ALTER_TOKEN, false},
+		{"AND", token.KEYWORD_AND_TOKEN, false},
+		{"ANY", token.KEYWORD_ANY_TOKEN, false},
+		{"ARE", token.KEYWORD_ARE_TOKEN, false},
+		{"AS", token.KEYWORD_AS_TOKEN, false},
+		{"ASC", token.KEYWORD_ASC_TOKEN, false},
+		{"ASSERTION", token.KEYWORD_ASSERTION_TOKEN, false},
+		{"AT", token.KEYWORD_AT_TOKEN, false},
+		{"AUTHORIZATION", token.KEYWORD_AUTHORIZATION_TOKEN, false},
+		{"AVG", token.KEYWORD_AVG_TOKEN, false},
+		{"BEGIN", token.KEYWORD_BEGIN_TOKEN, false},
+		{"BETWEEN", token.KEYWORD_BETWEEN_TOKEN, false},
+		{"BIT", token.KEYWORD_BIT_TOKEN, false},
+		{"BIT_LENGTH", token.KEYWORD_BIT_LENGTH_TOKEN, false},
+		{"BOTH", token.KEYWORD_BOTH_TOKEN, false},
+		{"BY", token.KEYWORD_BY_TOKEN, false},
+		{"ROW_COUNT", token.KEYWORD_ROW_COUNT_TOKEN, false},
+		{"SCALE", token.KEYWORD_SCALE_TOKEN, false},
+		{"SCHEMA_NAME", token.KEYWORD_SCHEMA_NAME_TOKEN, false},
+		{"SERIALIZABLE", token.KEYWORD_SERIALIZABLE_TOKEN, false},
+		{"SERVER_NAME", token.KEYWORD_SERVER_NAME_TOKEN, false},
+		{"SUBCLASS_ORIGIN", token.KEYWORD_SUBCLASS_ORIGIN_TOKEN, false},
+		{"TABLE_NAME", token.KEYWORD_TABLE_NAME_TOKEN, false},
+		{"TYPE", token.KEYWORD_TYPE_TOKEN, false},
+		{"UNCOMMITTED", token.KEYWORD_UNCOMMITTED_TOKEN, false},
+		{"UNNAMED", token.KEYWORD_UNNAMED_TOKEN, false},
+		{"TBL", token.IDENTIFIER_TOKEN, false},
+		{"age", token.IDENTIFIER_TOKEN, false},
+		{"1", token.NUMBER_TOKEN, false},
+		{"123", token.NUMBER_TOKEN, false},
+		{"123.", token.NUMBER_TOKEN, false},
+		{"123.4", token.NUMBER_TOKEN, false},
+		{".1", token.NUMBER_TOKEN, false},
+		{"1.1.1", token.NUMBER_TOKEN, false},
+		{"1..2", token.NUMBER_TOKEN, false},
+		{"1..", token.NUMBER_TOKEN, false},
+		{"1E+1", token.NUMBER_TOKEN, false},
+		{"1E-1", token.NUMBER_TOKEN, false},
+		{"1E1", token.NUMBER_TOKEN, false},
+		{"12E10", token.NUMBER_TOKEN, false},
+		{"12.3E-2", token.NUMBER_TOKEN, false},
+		{"1.E+2", token.NUMBER_TOKEN, false},
+		{".2E+2", token.NUMBER_TOKEN, false},
+		{"1E+", token.NUMBER_TOKEN, true},
+		{"B'0101'", token.NUMBER_TOKEN, false},
+		{"B'0101' \t '0101'", token.NUMBER_TOKEN, false},
+		{"B'0101' -- Comment '0101'", token.NUMBER_TOKEN, false},
+		{"B'0101' -- Comment\n '0101'", token.NUMBER_TOKEN, false},
+		{"B'0201' -- Comment\n '0101'", token.NUMBER_TOKEN, true},
+		{"X'0A01'", token.NUMBER_TOKEN, false},
+		{"X'0a01' \t '0101'", token.NUMBER_TOKEN, false},
+		{"X'0A01' -- Comment '0101'", token.NUMBER_TOKEN, false},
+		{"X'0A01' -- Comment\n '0101'", token.NUMBER_TOKEN, false},
+		{"X'0K01' -- Comment\n '0101'", token.NUMBER_TOKEN, true},
+		{"B'0101' \t SELECT", token.NUMBER_TOKEN, false},
+		{"X'0101' \t SELECT", token.NUMBER_TOKEN, false},
+		{"--- Comment\n", token.COMMENT_TOKEN, false},
+		{"--- Comment", token.COMMENT_TOKEN, false},
+		{"-----1+2\n", token.COMMENT_TOKEN, false},
+		{"-- 1---2\n", token.COMMENT_TOKEN, false},
+		{"-- Expect: None\n", token.COMMENT_TOKEN, false},
+	}
+	for i, tt := range tests {
+		l := New(tt.input)
+		tkn, err := l.nextToken()
+		if err != nil && tt.isError == false {
+			t.Errorf("[%d] Err error is not nil: %s (%s)\n", i, err, tt.input)
+		}
+		if err == nil && tt.isError == true {
+			t.Errorf("[%d] Err error is nil (%s)\n", i, tt.input)
+		}
+		if tkn.Type != tt.expectedToken && tt.isError == false {
+			t.Errorf("[%d] Err: Token Literal mistmatch (expected: %s, but got: %s)\n", i, tt.expectedToken, tkn.Type)
+		}
+	}
+}
+
+func zip(a, b []token.Token) ([][2]token.Token, error) {
+	if len(a) != len(b) {
+		return nil, errors.New(fmt.Sprintf("Length mismatch required:%d, but %d got.", len(a), len(b)))
+	}
+	r := make([][2]token.Token, len(a), len(b))
+	for i, e := range a {
+		r[i] = [2]token.Token{e, b[i]}
+	}
+	return r, nil
+}
+
+func TestTokenize(t *testing.T) {
+	tests := []struct {
+		input         string
+		expectedToken []token.Token
+	}{
+		{"  SELECT\n n,\n c * .1,\n -1.2\nFROM table1\nWHERE y>1981 AND m<>11;",
+			[]token.Token{
+				token.Token{Type: token.KEYWORD_SELECT_TOKEN, Literal: "SELECT"},
+				token.Token{Type: token.IDENTIFIER_TOKEN, Literal: "n"},
+				token.Token{Type: token.COMMA_TOKEN, Literal: ","},
+				token.Token{Type: token.KEYWORD_C_TOKEN, Literal: "c"},
+				token.Token{Type: token.ASTERISK_TOKEN, Literal: "*"},
+				token.Token{Type: token.NUMBER_TOKEN, Literal: ".1"},
+				token.Token{Type: token.COMMA_TOKEN, Literal: ","},
+				token.Token{Type: token.MINUS_SIGN_TOKEN, Literal: "-"},
+				token.Token{Type: token.NUMBER_TOKEN, Literal: "1.2"},
+				token.Token{Type: token.KEYWORD_FROM_TOKEN, Literal: "FROM"},
+				token.Token{Type: token.IDENTIFIER_TOKEN, Literal: "table1"},
+				token.Token{Type: token.KEYWORD_WHERE_TOKEN, Literal: "WHERE"},
+				token.Token{Type: token.IDENTIFIER_TOKEN, Literal: "y"},
+				token.Token{Type: token.GREATER_THAN_OPERATOR_TOKEN, Literal: ">"},
+				token.Token{Type: token.NUMBER_TOKEN, Literal: "1981"},
+				token.Token{Type: token.KEYWORD_AND_TOKEN, Literal: "AND"},
+				token.Token{Type: token.IDENTIFIER_TOKEN, Literal: "m"},
+				token.Token{Type: token.NOT_EQUALS_OPERATOR_TOKEN, Literal: "<>"},
+				token.Token{Type: token.NUMBER_TOKEN, Literal: "11"},
+				token.Token{Type: token.SEMICOLON_TOKEN, Literal: ";"},
+				token.Token{Type: token.EOF_TOKEN, Literal: ""},
+			},
+		},
+		{"  SELECT\n END-EXEC END-EX",
+			[]token.Token{
+				token.Token{Type: token.KEYWORD_SELECT_TOKEN, Literal: "SELECT"},
+				token.Token{Type: token.KEYWORD_END_EXEC_TOKEN, Literal: "END-EXEC"},
+				token.Token{Type: token.KEYWORD_END_TOKEN, Literal: "END"},
+				token.Token{Type: token.MINUS_SIGN_TOKEN, Literal: "-"},
+				token.Token{Type: token.IDENTIFIER_TOKEN, Literal: "EX"},
+				token.Token{Type: token.EOF_TOKEN, Literal: ""},
+			},
+		},
+	}
+
+	for i, tt := range tests {
+		l := New(tt.input)
+		tkn, err := l.Tokenize()
+		if err != nil {
+			t.Errorf("Tokenize Error %s\n", err)
+			continue
+		}
+		pair, err := zip(tt.expectedToken, tkn)
+		if err != nil {
+			t.Errorf("Result Number Mismatch %s\n", err)
+			continue
+		}
+		for j, p := range pair {
+			if p[0].Type != p[1].Type {
+				t.Errorf("[%d-%d] Err expected: %s, but got: %s\n", i, j, p[0].Type, p[1].Type)
+			}
+		}
+
 	}
 }
