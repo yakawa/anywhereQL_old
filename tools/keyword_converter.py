@@ -69,3 +69,13 @@ if __name__ == '__main__':
     for k in SQL92_non_reserved:
         print("\t \"{}\": KEYWORD_{}_TOKEN,".format(k, k.replace('-', '_')))
     print()
+
+    print("\n")
+    print("---------")
+    print("\n")
+
+    for k in SQL92_reserved:
+        print("{{\"{}\", token.KEYWORD_{}_TOKEN, \"{}\"}}, ".format(k, k.replace('-', '_'), k))
+    for k in SQL92_non_reserved:
+        print("{{\"{}\", token.KEYWORD_{}_TOKEN, \"{}\"}}, ".format(k, k.replace('-', '_'), k))
+    print()
