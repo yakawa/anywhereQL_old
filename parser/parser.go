@@ -226,6 +226,18 @@ func (p *Parser) parseValueExpression(t []token.Token) *ast.ValueExpression {
 	// <term> ::= <factor> | <term> <asterisk> <factor> | <term> <solidus> <factor>
 	// <factor> ::= [ <sign> ] <numeric primary>
 	// <numeric primary> ::= <value expression primary> | <numeric value function>
+
+	// <value expression primary> ::= <unsigned value specification> | <column reference> | <set function specification> | <scalar subquery> | <case expression> | <left paren> <value expression> <right paren> | <cast specification>
+	tkn = p.getToken()
+	if tkn.Type == token.KEYWORD_POSITION_TOKEN || tkn.Type == token.KEYWORD_EXTRACT_TOKEN ||
+		tkn.Type == token.KEYWORD_CHAR_LENGTH_TOKEN || tkn.Type == token.KEYWORD_CHARACTER_LENGTH_TOKEN ||
+		tkn.Type == token.KEYWORD_OCTET_LENGTH_TOKEN || tkn.Type == token.KEYWORD_BIT_LENGTH_TOKEN {
+		p.parseNumericValueFunction()
+	}
+	return nil
+}
+
+func (p *Parser) parseNumericValueFunction() {
 	// <numeric value function> ::= <position expression> | <extract expression> | <length expression>
 	// <position expression> ::= POSITION <left paren> <character value expression> IN <character value expression> <right paren>
 	// <extract expression> ::= EXTRACT <left paren> <extract field> FROM <extract source> <right paren>
@@ -234,7 +246,4 @@ func (p *Parser) parseValueExpression(t []token.Token) *ast.ValueExpression {
 	// <octet length expression> ::= OCTET_LENGTH <left paren> <string value expression> <right paren>
 	// <bit length expression> ::= BIT_LENGTH <left paren> <string value expression> <right paren>
 
-	// <value expression primary> ::= <unsigned value specification> | <column reference> | <set function specification> | <scalar subquery> | <case expression> | <left paren> <value expression> <right paren> | <cast specification>
-
-	return nil
 }
